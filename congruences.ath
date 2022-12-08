@@ -1,0 +1,414 @@
+load "nat-times"
+load "nat-less"
+load "integer-times" 
+#load "integer-plus"
+
+extend-module Z {
+
+	define [n1 n2 n3 n4 n5 n6] := [?n1:N ?n2:N ?n3:N ?n4:N ?n5:N ?n6:N]
+
+	define [z1 z2 z3 z4 z5 z6] := [?z1:Z ?z2:Z ?z3:Z ?z4:Z ?z5:Z ?z6:Z]
+
+	extend-module Negate {
+		define negate-zero := (negate zero = zero)
+		define double-negate := (forall z1 . negate negate z1 = z1)
+		define lemma100 := (forall z1 z2 . z1 = z2 ==> negate z1 = negate z2)
+
+		conclude negate-zero
+		(!chain [(negate zero)
+			= (negate pos N.zero) [Z.zero-definition]
+			= (neg N.zero) [Negate.positive]
+			= zero [Z.zero-property]
+		])
+
+		datatype-cases double-negate {
+			(pos n1) =>
+				(!chain [(negate negate (pos n1))
+					= (negate (neg n1)) [Negate.positive]
+					= (pos n1) [Negate.negative]
+				])
+			| (neg n1) =>
+				(!chain [(negate negate (neg n1))
+					= (negate (pos n1)) [Negate.negative]
+					= (neg n1) [Negate.positive]
+				])
+		}
+
+		conclude lemma100
+		pick-any z1:Z z2:Z
+		assume hyp := (z1 = z2)
+		(!chain [(negate z1) = (negate z2) [hyp]])
+	}
+
+	extend-module Plus {
+		define lemma100 := (forall z1 z2 z3 . z1 = z2 ==> z1 + z3 = z2 + z3)
+		# Propiedades no tan importantes abajo
+		define negate-distributive-pos-pos := (forall n1 n2 . negate (pos n1 + pos n2) = (negate pos n1) + (negate pos n2))
+		define negate-distributive-neg-neg := (forall n1 n2 . negate (neg n1 + neg n2) = (negate neg n1) + (negate neg n2))
+		define negate-distributive-pos-neg := (forall n1 n2 . negate (pos n1 + neg n2) = (negate pos n1) + (negate neg n2))
+		define negate-distributive-neg-pos := (forall n1 n2 . negate (neg n1 + pos n2) = (negate neg n1) + (negate pos n2))
+		# Propiedades no tan importantes arriba
+		define negate-distributive := (forall z1 z2 . negate (z1 + z2) = (negate z1) + (negate z2))
+
+		conclude lemma100 
+		pick-any z1:Z z2:Z z3:Z
+		assume hyp := (z1 = z2)
+		(!chain [(z1 + z3) = (z2 + z3) [hyp]])
+
+		conclude negate-distributive-pos-pos
+		pick-any n1:N n2:N
+		(!chain [(negate (pos n1 + pos n2))
+			= (negate pos (n1 + n2)) [Plus.pos-pos]
+			= (neg (n1 + n2)) [Negate.positive]
+			= (neg n1 + neg n2) [Plus.neg-neg]
+			= ((negate pos n1) + (negate pos n2)) [Negate.positive]
+		])
+
+		conclude negate-distributive-neg-neg
+		pick-any n1:N n2:N
+		(!chain [(negate (neg n1 + neg n2))
+			= (negate neg (n1 + n2)) [Plus.neg-neg]
+			= (pos (n1 + n2)) [Negate.negative]
+			= (pos n1 + pos n2) [Plus.pos-pos]
+			= ((negate neg n1) + (negate neg n2)) [Negate.negative]
+		])
+
+		conclude negate-distributive-pos-neg
+		pick-any n1:N n2:N
+		(!two-cases
+			assume case1 := (n1 < n2)
+				let {case1-asymmetry := (!chain-> [(n1 < n2) ==> (~ n2 < n1) [N.Less.asymmetric]])}
+				(!chain [(negate (pos n1 + neg n2))
+					= (negate (neg (n2 - n1))) [Plus.pos-neg-case1]
+					= (pos (n2 - n1)) [Negate.negative]
+					= (pos n2 + neg n1) [Plus.pos-neg-case2]
+					= ((negate neg n2) + (negate pos n1)) [Negate.positive Negate.negative]
+					= ((negate pos n1) + (negate neg n2)) [Plus.commutative]
+				])
+			assume case2 := (~ n1 < n2)
+				let {
+					case2-hyp := (!chain-> [(~ n1 < n2)
+						==> (n2 <= n1) [N.Less=.trichotomy2]
+						==> (n2 < n1 | n2 = n1) [N.Less=.definition]
+					])
+				}
+				(!cases case2-hyp
+					assume case21 := (n2 < n1)
+						(!chain [(negate (pos n1 + neg n2))
+							= (negate pos (n1 - n2)) [Plus.pos-neg-case2]
+							= (neg (n1 - n2)) [Negate.positive]
+							= (pos n2 + neg n1) [Plus.pos-neg-case1]
+							= (neg n1 + pos n2) [Plus.commutative]
+							= ((negate pos n1) + (negate neg n2)) [Negate.positive Negate.negative]
+						])
+					assume case22 := (n2 = n1)
+						(!chain [(negate (pos n1 + neg n2))
+							= (negate (pos n1 + neg n1)) [case22]
+							= (negate (pos n1 + negate pos n1)) [Negate.positive]
+							= (negate zero) [Plus.Right-Inverse]
+							= zero [Negate.negate-zero]
+							= (pos n1 + negate pos n1) [Plus.Right-Inverse]
+							= ((negate pos n1) + pos n1) [Plus.commutative]
+							= ((negate pos n1) + (negate neg n1)) [Negate.negative]
+							= ((negate pos n1) + (negate neg n2)) [case22]
+						])
+				)
+		)
+
+		conclude negate-distributive-neg-pos
+		pick-any n1:N n2:N
+		(!chain [(negate (neg n1 + pos n2))
+			= (negate (pos n2 + neg n1)) [Plus.commutative]
+			= ((negate pos n2) + (negate neg n1)) [negate-distributive-pos-neg]
+			= ((negate neg n1) + (negate pos n2)) [Plus.commutative]
+		])
+
+		datatype-cases negate-distributive {
+			(pos n1) =>
+				datatype-cases (forall z2 . negate(pos n1 + z2) = (negate pos n1) + negate z2) {
+					(pos n2) =>
+						(!instance negate-distributive-pos-pos [n1 n2])
+					| (neg n2) =>
+						(!instance negate-distributive-pos-neg [n1 n2])
+				}
+			| (neg n1) => 
+				datatype-cases (forall z2 . negate(neg n1 + z2) = (negate neg n1) + negate z2) {
+					(pos n2) =>
+						(!instance negate-distributive-neg-pos [n1 n2])
+					| (neg n2) =>
+						(!instance negate-distributive-neg-neg [n1 n2])
+						
+				}
+		}
+
+	}
+
+	extend-module Times {
+		define zero-left := (forall z1 . zero * z1 = zero)
+		define lemma100 := (forall z1 z2 z3 . z1 = z2 ==> z1 * z3 = z2 * z3)
+		define negate-distributive-left := (forall z1 z2 . negate (z1 * z2) = (negate z1) * z2)
+		define negate-distributive-right := (forall z1 z2 . negate (z1 * z2) = z1 * (negate z2))
+
+		datatype-cases zero-left {
+			(pos n1) =>
+				(!chain [(zero * pos n1)
+					= (pos N.zero * pos n1) [zero-definition]
+					= (pos (N.zero * n1)) [Times.pos-pos]
+					= (pos N.zero) [N.Times.left-zero]
+					= zero [zero-definition]
+				])
+			| (neg n1) =>
+				(!chain [(zero * neg n1)
+					= (neg N.zero * neg n1) [zero-property]
+					= (pos (N.zero * n1)) [Times.neg-neg]
+					= (pos N.zero) [N.Times.left-zero]
+					= zero [zero-definition]
+				])
+		}
+
+		conclude lemma100 
+		pick-any z1:Z z2:Z z3:Z
+		assume hyp := (z1 = z2)
+		(!chain [(z1 * z3) = (z2 * z3) [hyp]])
+
+		datatype-cases negate-distributive-left {
+			(pos n1) =>
+				datatype-cases (forall z2 . negate (pos n1 * z2) = (negate pos n1) * z2) {
+					(pos n2) =>
+						(!chain [(negate (pos n1 * pos n2))
+							= (negate (pos (n1 N.* n2))) [Times.pos-pos]
+							= (neg (n1 N.* n2)) [Negate.positive]
+							= (neg n1 * pos n2) [Times.neg-pos]
+							= ((negate pos n1) * pos n2) [Negate.positive]
+						])
+					| (neg n2) =>
+						(!chain [(negate (pos n1 * neg n2))
+							= (negate (neg (n1 N.* n2))) [Times.pos-neg]
+							= (pos (n1 N.* n2)) [Negate.negative]
+							= (neg n1 * neg n2) [Times.neg-neg]
+							= ((negate pos n1) * neg n2) [Negate.positive]
+						])
+				}
+			| (neg n1) =>
+				datatype-cases (forall z2 . negate (neg n1 * z2) = (negate neg n1) * z2) {
+					(pos n2) =>
+						(!chain [(negate (neg n1 * pos n2))
+							= (negate (neg (n1 N.* n2))) [Times.neg-pos]
+							= (pos (n1 N.* n2)) [Negate.negative]
+							= (pos n1 * pos n2) [Times.pos-pos]
+							= ((negate neg n1) * pos n2) [Negate.negative]
+						])
+					| (neg n2) =>
+						(!chain [(negate (neg n1 * neg n2))
+							= (negate (pos (n1 N.* n2))) [Times.neg-neg]
+							= (neg (n1 N.* n2)) [Negate.positive]
+							= (pos n1 * neg n2) [Times.pos-neg]
+							= ((negate neg n1) * neg n2) [Negate.negative]
+						])
+				}
+		}
+
+		datatype-cases negate-distributive-right {
+			(pos n1) =>
+				datatype-cases (forall z2 . negate (pos n1 * z2) = pos n1 * negate z2) {
+					(pos n2) =>
+						(!chain [(negate (pos n1 * pos n2))
+							= (negate (pos (n1 N.* n2))) [Times.pos-pos]
+							= (neg (n1 N.* n2)) [Negate.positive]
+							= (pos n1 * neg n2) [Times.pos-neg]
+							= (pos n1 * negate pos n2) [Negate.positive]
+						])
+					| (neg n2) =>
+						(!chain [(negate (pos n1 * neg n2))
+							= (negate (neg (n1 N.* n2))) [Times.pos-neg]
+							= (pos (n1 N.* n2)) [Negate.negative]
+							= (pos n1 * pos n2) [Times.pos-pos]
+							= (pos n1 * negate neg n2) [Negate.negative]
+						])
+				}
+			| (neg n1) =>
+				datatype-cases (forall z2 . negate (neg n1 * z2) = neg n1 * negate z2) {
+					(pos n2) =>
+						(!chain [(negate (neg n1 * pos n2))
+							= (negate (neg (n1 N.* n2))) [Times.neg-pos]
+							= (pos (n1 N.* n2)) [Negate.negative]
+							= (neg n1 * neg n2) [Times.neg-neg]
+							= (neg n1 * negate pos n2) [Negate.positive]
+						])
+					| (neg n2) =>
+						(!chain [(negate (neg n1 * neg n2))
+							= (negate (pos (n1 N.* n2))) [Times.neg-neg]
+							= (neg (n1 N.* n2)) [Negate.positive]
+							= (neg n1 * pos n2) [Times.neg-pos]
+							= (neg n1 * negate neg n2) [Negate.negative]
+						])
+				}
+		}
+	}
+
+	declare divides: [Z Z] -> Boolean [300]
+
+	module divides {
+		assert definition := (forall z1 z2 . z1 divides z2 <==> (exists z3 . z2 = z1 * z3))
+
+		define transitive := (forall z1 z2 z3 . z1 divides z2 & z2 divides z3 ==> z1 divides z3)
+		define negative-too := (forall z1 z2 . z1 divides z2 <==> z1 divides (negate z2))
+		define with-times := (forall z1 z2 z3 . z1 divides z2 ==> z1 divides (z2 * z3))
+		define lemma2 := (forall z1 z2 z3 . z1 divides z2 & z1 divides z3 ==> z1 divides (z2 + z3))
+		define withzero := (forall z1 . z1 divides zero)
+
+		conclude transitive
+		pick-any z1 z2 z3
+		assume hyp := (z1 divides z2 & z2 divides z3)
+		let {
+			h1 := (!chain-> [(z1 divides z2) <==> (exists z4 . z2 = z1 * z4) [definition]]);
+			h2 := (!chain-> [(z2 divides z3) <==> (exists z5 . z3 = z2 * z5) [definition]])
+		}
+		pick-witness z4 for h1
+		let {h1evo := (z2 = z1 * z4)}
+		pick-witness z5 for h2
+		(!chain-> [(z3 = z2 * z5)
+			==> (z3 = (z1 * z4) * z5) [h1evo]
+			<==> (z3 = z1 * (z4 * z5)) [Times.associative]
+			==> (exists z6 . z3 = z1 * z6) [existence]
+			<==> (z1 divides z3) [definition]
+		])
+
+		conclude negative-too
+		pick-any z1 z2
+		(!equiv
+			conclude (z1 divides z2 ==> z1 divides (negate z2))
+				assume hyp := (z1 divides z2)
+				let {hypevo := (!chain-> [hyp ==> (exists z3 . z2 = z1 * z3) [definition]])}
+				pick-witness z3 for hypevo
+				(!chain-> [(z2 = z1 * z3)
+					==> (negate z2 = negate (z1 * z3)) [Negate.lemma100]
+					<==> (negate z2 = z1 * negate z3) [Times.negate-distributive-right]
+					==> (exists z4 . negate z2 = z1 * z4) [existence]
+					<==> (z1 divides (negate z2)) [definition]
+				])
+
+			conclude (z1 divides (negate z2) ==> z1 divides z2)
+				assume hyp := (z1 divides (negate z2))
+				let {hypevo := (!chain-> [hyp ==> (exists z3 . negate z2 = z1 * z3)])}
+				pick-witness z3 for hypevo
+				(!chain-> [(negate z2 = z1 * z3)
+					==> (negate negate z2 = negate (z1 * z3)) [Negate.lemma100]
+					<==> (z2 = negate (z1 * z3)) [Negate.double-negate]
+					==> (z2 = z1 * negate z3) [Times.negate-distributive-right]
+					==> (exists z4 . z2 = z1 * z4) [existence]
+					<==> (z1 divides z2)
+				])
+		)
+
+		conclude with-times 
+		pick-any z1 z2 z3
+		assume hyp := (z1 divides z2)
+		let {s1 := (!chain-> [(z1 divides z2) <==> (exists z3 . z2 = z1 * z3) [definition]])}
+		pick-witness z4 for s1
+		(!chain-> [(z2 = z1 * z4)
+			==> (z2 * z3 = (z1 * z4) * z3) [Times.lemma100]
+			==> (z2 * z3 = z1 * (z4 * z3)) [Times.associative]
+			==> (exists z5 . z2 * z3 = z1 * z5) [existence]
+			<==> (z1 divides (z2 * z3)) [definition]
+		])
+
+		conclude lemma2
+		pick-any z1 z2 z3
+		assume hyp := (z1 divides z2 & z1 divides z3)
+		let {
+			h1 := (!chain-> [(z1 divides z2) <==> (exists z4 . z2 = z1 * z4) [definition]]);
+			h2 := (!chain-> [(z1 divides z3) <==> (exists z5 . z3 = z1 * z5) [definition]])
+		}
+		pick-witness z4 for h1
+		let {h1evo := (z2 = z1 * z4)}
+		pick-witness z5 for h2
+		(!chain-> [(z3 = z1 * z5)
+			==> (z3 + z2 = z1 * z5 + z2) [Plus.lemma100]
+			==> (z3 + z2 = z1 * z5 + z1 * z4) [h1evo]
+			==> (z3 + z2 = z1 * (z5 + z4)) [Times.Left-Distributive]
+			==> (exists z6 . z3 + z2 = z1 * z6) [existence]
+			<==> (z1 divides (z3 + z2)) [definition]
+			<==> (z1 divides (z2 + z3)) [Plus.commutative]
+		])
+
+		conclude withzero
+		pick-any z1
+		(!chain-> [(zero = zero)
+			==> (zero * z1 = zero * z1) [Times.lemma100]
+			==> (zero = zero * z1) [Times.zero-left]
+			==> (zero = z1 * zero) [Times.commutative]
+			==> (exists z2 . zero = z1 * z2) [existence]
+			<==> (z1 divides zero) [definition]
+		])
+	}
+
+	declare cd: [Z Z Z] -> Boolean
+
+	module cd {
+		assert definition := (forall z1 z2 z3 . (cd z1 z2 z3) <==> z3 divides z1 & z3 divides z2)
+	}
+
+	declare gcd: [Z Z] -> Z
+
+	declare congruent: [Z Z Z] -> Boolean
+
+	module congruences {
+		assert definition := (forall z1 z2 z3 . (congruent z1 z2 z3) <==> z2 divides (z1 - z3))
+
+		define reflexive := (forall z1 z2 . (congruent z1 z2 z1))
+		define symmetric := (forall z1 z2 z3 . (congruent z1 z2 z3) ==> (congruent z3 z2 z1))
+		define with-plus := (forall z1 z2 z3 z4 . (congruent z1 z2 z3) ==> (congruent (z1 + z4) z2 (z3 + z4)))
+		define with-times := (forall z1 z2 z3 z4 . (congruent z1 z2 z3) ==> (congruent (z1 * z4) z2 (z3 * z4)))
+
+		conclude reflexive
+		pick-any z1 z2
+		(!chain<- [(congruent z1 z2 z1)
+			<== (z2 divides (z1 - z1)) [definition]
+			<== (z2 divides (z1 + negate z1)) [Minus.definition]
+			<== (z2 divides zero) [Plus.Right-Inverse]
+			<== true [divides.withzero]
+		])
+
+		conclude symmetric 
+		pick-any z1 z2 z3
+		(!chain [(congruent z1 z2 z3)
+			==> (z2 divides (z1 - z3)) [definition]
+			==> (z2 divides (negate (z1 - z3))) [divides.negative-too]
+			==> (z2 divides (negate (z1 + negate z3))) [Minus.definition]
+			==> (z2 divides ((negate z1) + (negate negate z3))) [Plus.negate-distributive]
+			==> (z2 divides ((negate z1) + z3)) [Negate.double-negate]
+			==> (z2 divides (z3 + (negate z1))) [Plus.commutative]
+			==> (z2 divides (z3 - z1)) [Minus.definition]
+			==> (congruent z3 z2 z1) [definition]
+		])
+
+		conclude with-plus
+		pick-any z1 z2 z3 z4
+		(!chain [(congruent z1 z2 z3)
+			==> (z2 divides (z1 - z3)) [definition]
+			==> (z2 divides (z1 + negate z3)) [Minus.definition]
+			==> (z2 divides ((z1 + zero) + negate z3)) [Plus.Right-Identity]
+			==> (z2 divides ((z1 + (z4 + negate z4)) + negate z3)) [Plus.Right-Inverse]
+			==> (z2 divides (((z1 + z4) + negate z4) + negate z3)) [Plus.associative]
+			==> (z2 divides ((z1 + z4) + (negate z4 + negate z3))) [Plus.associative]
+			==> (z2 divides ((z1 + z4) + negate (z4 + z3))) [Plus.negate-distributive]
+			==> (z2 divides ((z1 + z4) - (z4 + z3))) [Minus.definition]
+			==> (z2 divides ((z1 + z4) - (z3 + z4))) [Plus.commutative]
+			==> (congruent (z1 + z4) z2 (z3 + z4)) [definition]
+		])
+
+		conclude with-times
+		pick-any z1 z2 z3 z4
+		(!chain [(congruent z1 z2 z3)
+			==> (z2 divides (z1 - z3)) [definition]
+			==> (z2 divides (z1 + negate z3)) [Minus.definition]
+			==> (z2 divides ((z1 + negate z3)) * z4) [divides.with-times]
+			==> (z2 divides (z1 * z4 + (negate z3) * z4)) [Times.Right-Distributive]
+			==> (z2 divides (z1 * z4 + (negate (z3 * z4)))) [Times.negate-distributive-left]
+			==> (z2 divides ((z1 * z4) - (z3 * z4))) [Minus.definition]
+			==> (congruent (z1 * z4) z2 (z3 * z4)) [definition]
+		])
+
+	}
+}
